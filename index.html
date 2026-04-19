@@ -126,6 +126,11 @@
 <audio id="bgm" loop preload="auto">
   <source src="https://github.com/Jason0x0/tempo/raw/refs/heads/main/bgm.mp3" type="audio/mpeg">
 </audio>
+<script>
+document.getElementById('bgm').addEventListener('error', function() {
+  alert('音频加载失败，可能是网络问题或GitHub链接被阻止');
+});
+</script>
 
 <div class="container">
   <div class="page active" id="intro-page">
@@ -198,11 +203,36 @@ let musicPlaying = false;
 const bgm = document.getElementById('bgm');
 function toggleMusic() {
   const btn = document.getElementById('music-btn');
-  if (musicPlaying) { bgm.pause(); btn.textContent = '🔇'; btn.classList.remove('playing'); musicPlaying = false; }
-  else {
+  if (musicPlaying) { 
+    bgm.pause(); 
+    btn.textContent = '🔇'; 
+    btn.classList.remove('playing'); 
+    musicPlaying = false; 
+  } else {
+    btn.textContent = '⏳';
     bgm.volume = 0.5;
-    bgm.play().then(() => { btn.textContent = '🔊'; btn.classList.add('playing'); musicPlaying = true; })
-      .catch(() => alert('请先点击页面任意位置，再点击播放按钮'));
+    bgm.load(); // 强制重新加载
+    
+    // 超时检测
+    const timeout = setTimeout(() => {
+      if (!musicPlaying) {
+        btn.textContent = '🔇';
+        alert('音频加载超时，请检查网络或刷新页面重试');
+      }
+    }, 8000);
+    
+    bgm.oncanplaythrough = function() {
+      bgm.play().then(() => { 
+        clearTimeout(timeout);
+        btn.textContent = '🔊'; 
+        btn.classList.add('playing'); 
+        musicPlaying = true; 
+      }).catch(() => {
+        clearTimeout(timeout);
+        btn.textContent = '🔇';
+        alert('请先点击页面任意位置，再点击播放按钮');
+      });
+    };
   }
 }
 
