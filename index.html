@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>泰拉转生模拟器</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-dark: #0d1117; --bg-card: #161b22; --border: #30363d;
+      --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
+      --gold: #f0b036; --gold-dark: #c4912a; --orange: #ff7b3a;
+      --blue: #58a6ff; --red: #f85149; --green: #3fb950;
+      --purple: #a371f7; --pink: #db61a2; --cyan: #39c5cf;
+    }
+    body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg-dark); color: var(--text); min-height: 100vh; line-height: 1.6; }
+    body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px); pointer-events: none; z-index: 9999; }
+    .container { max-width: 540px; margin: 0 auto; padding: 16px; min-height: 100vh; }
+    .page { display: none; } .page.active { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .ark-btn { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: var(--bg-dark); border: none; padding: 14px 32px; font-size: 15px; font-weight: 600; cursor: pointer; clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); width: 100%; letter-spacing: 2px; transition: all 0.2s; }
+    .ark-btn:active { transform: scale(0.97); } .ark-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ark-btn-secondary { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+    .ark-btn-small { padding: 10px 20px; font-size: 13px; }
+    .music-btn { position: fixed; top: 16px; right: 16px; width: 44px; height: 44px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 100; font-size: 18px; }
+    .music-btn.playing { border-color: var(--gold); box-shadow: 0 0 12px rgba(240,176,54,0.3); }
+    .intro { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px 20px; position: relative; }
+    .intro-logo { width: 100px; height: 100px; position: relative; margin-bottom: 32px; }
+    .intro-logo::before { content: ''; position: absolute; inset: 0; border: 2px solid var(--gold); transform: rotate(45deg); animation: pulse 2s ease-in-out infinite; }
+    .intro-logo::after { content: '◈'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--gold); }
+    .intro h1 { font-family: 'Noto Serif SC', serif; font-size: 28px; margin-bottom: 8px; letter-spacing: 6px; }
+    .intro-sub { color: var(--text2); font-size: 12px; letter-spacing: 4px; margin-bottom: 40px; }
+    .intro p { color: var(--text2); font-size: 14px; line-height: 2; margin-bottom: 40px; max-width: 300px; }
+    .intro-btns { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 280px; }
+    .intro-footer { position: absolute; bottom: 24px; font-size: 10px; color: var(--text3); letter-spacing: 2px; }
+    .stats-page-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(180deg, rgba(240,176,54,0.05), transparent); border-bottom: 1px solid var(--border); }
+    .stats-page-header h2 { font-family: 'Noto Serif SC', serif; font-size: 18px; margin-bottom: 8px; letter-spacing: 3px; }
+    .stats-page-header p { color: var(--text2); font-size: 12px; }
+    .points-left { text-align: center; font-size: 16px; margin-bottom: 20px; color: var(--gold); }
+    .stat-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .stat-row-name { width: 70px; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+    .stat-row-bar { flex: 1; display: flex; gap: 4px; margin: 0 12px; }
+    .stat-dot { width: 20px; height: 20px; background: var(--border); clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); transition: all 0.15s; }
+    .stat-dot.filled { background: var(--gold); }
+    .stat-row-btns { display: flex; gap: 8px; }
+    .stat-btn { width: 32px; height: 32px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%); }
+    .stat-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .stat-btn:hover:not(:disabled) { border-color: var(--gold); }
+    .stats-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
+    .talent-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(180deg, rgba(240,176,54,0.05), transparent); border-bottom: 1px solid var(--border); }
+    .talent-header h2 { font-family: 'Noto Serif SC', serif; font-size: 18px; margin-bottom: 8px; letter-spacing: 3px; }
+    .talent-header p { color: var(--text2); font-size: 12px; }
+    .talent-count { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; font-size: 13px; }
+    .talent-count-bar { display: flex; gap: 6px; }
+    .talent-count-dot { width: 12px; height: 12px; background: var(--border); clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+    .talent-count-dot.filled { background: var(--gold); box-shadow: 0 0 8px rgba(240,176,54,0.5); }
+    .talent-pool { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-height: 55vh; overflow-y: auto; }
+    .talent-card { background: var(--bg-card); border: 1px solid var(--border); padding: 12px 14px; cursor: pointer; display: flex; align-items: flex-start; gap: 12px; position: relative; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); transition: all 0.2s; }
+    .talent-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--border); }
+    .talent-card:hover { border-color: var(--gold); } .talent-card:hover::before { background: var(--gold); }
+    .talent-card.selected { border-color: var(--gold); background: rgba(240,176,54,0.08); } .talent-card.selected::before { background: var(--gold); }
+    .talent-card.disabled { opacity: 0.35; cursor: not-allowed; }
+    .talent-icon { width: 36px; height: 36px; background: var(--bg-dark); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .talent-info { flex: 1; min-width: 0; }
+    .talent-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .talent-rarity { font-size: 9px; padding: 2px 6px; letter-spacing: 1px; }
+    .talent-rarity.legend { background: linear-gradient(90deg, var(--gold), var(--orange)); color: var(--bg-dark); }
+    .talent-rarity.rare { background: var(--purple); color: white; }
+    .talent-rarity.bad { background: var(--red); color: white; }
+    .talent-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
+    .talent-effect { font-size: 10px; margin-top: 4px; color: var(--green); font-family: monospace; }
+    .talent-effect.negative { color: var(--red); }
+    .talent-actions { display: flex; gap: 10px; } .talent-actions .ark-btn { flex: 1; }
+    .game-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border); margin-bottom: 10px; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+    .age-display { display: flex; align-items: baseline; gap: 4px; }
+    .age-num { font-family: 'Noto Serif SC', serif; font-size: 28px; font-weight: 600; color: var(--gold); }
+    .age-label { font-size: 14px; color: var(--text2); }
+    .status-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .status-tag { padding: 3px 8px; font-size: 10px; letter-spacing: 1px; }
+    .status-tag.infected { background: var(--orange); color: var(--bg-dark); }
+    .status-tag.rhodes { background: var(--blue); color: white; }
+    .status-tag.special { background: var(--purple); color: white; }
+    .status-tag.danger { background: var(--red); color: white; }
+    .status-tag.cyan { background: var(--cyan); color: var(--bg-dark); }
+    .status-tag.green { background: var(--green); color: var(--bg-dark); }
+    .stats-bar { display: flex; gap: 6px; margin-bottom: 10px; padding: 10px; background: var(--bg-card); border: 1px solid var(--border); }
+    .stat-item { flex: 1; text-align: center; }
+    .stat-icon { font-size: 12px; } .stat-value { font-size: 16px; font-weight: 600; font-family: monospace; }
+    .stat-value.low { color: var(--red); } .stat-value.high { color: var(--green); }
+    .stat-name { font-size: 9px; color: var(--text3); }
+    .event-log { background: var(--bg-card); border: 1px solid var(--border); height: calc(100vh - 320px); min-height: 280px; overflow-y: auto; margin-bottom: 10px; position: relative; }
+    .event-log::before { content: 'TERMINAL LOG'; position: absolute; top: 8px; right: 10px; font-size: 9px; color: var(--text3); letter-spacing: 2px; z-index: 1; }
+    .event-log-inner { padding: 28px 14px 14px; }
+    .event-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; animation: fadeIn 0.3s; }
+    .event-item:last-child { border-bottom: none; }
+    .event-age { font-size: 11px; color: var(--gold); font-family: monospace; width: 32px; flex-shrink: 0; }
+    .event-text { font-size: 13px; line-height: 1.7; flex: 1; }
+    .event-text.good { color: var(--green); } .event-text.bad { color: var(--red); }
+    .event-text.special { color: var(--purple); } .event-text.legendary { color: var(--gold); }
+    .event-text.pink { color: var(--pink); } .event-text.cyan { color: var(--cyan); }
+    .ending-page { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px 0; }
+    .ending-header { text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(180deg, rgba(240,176,54,0.06), transparent); border-bottom: 1px solid var(--border); }
+    .ending-icon { font-size: 44px; margin-bottom: 12px; }
+    .ending-title { font-family: 'Noto Serif SC', serif; font-size: 22px; margin-bottom: 6px; letter-spacing: 3px; }
+    .ending-subtitle { color: var(--text2); font-size: 13px; }
+    .ending-stats { display: flex; gap: 1px; background: var(--border); margin-bottom: 14px; }
+    .ending-stat { flex: 1; text-align: center; padding: 14px; background: var(--bg-card); }
+    .ending-stat-value { font-size: 24px; font-weight: 600; color: var(--gold); font-family: monospace; }
+    .ending-stat-label { font-size: 9px; color: var(--text3); margin-top: 4px; letter-spacing: 2px; }
+    .ending-achievements { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .achievement { padding: 5px 12px; background: var(--bg-card); border: 1px solid var(--gold); font-size: 10px; color: var(--gold); }
+    .achievement.rare { border-color: var(--purple); color: var(--purple); }
+    .ending-card { background: var(--bg-card); border: 1px solid var(--border); padding: 16px; margin-bottom: 14px; }
+    .ending-section { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .ending-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .ending-label { font-size: 9px; color: var(--text3); margin-bottom: 5px; letter-spacing: 2px; }
+    .ending-value { font-size: 13px; line-height: 1.8; }
+    .ending-summary { padding: 16px; background: linear-gradient(135deg, rgba(240,176,54,0.05), transparent); border: 1px solid rgba(240,176,54,0.2); font-size: 13px; line-height: 1.9; margin-bottom: 16px; white-space: pre-wrap; }
+    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border); }
+  </style>
+</head>
+<body>
+<button class="music-btn" id="music-btn" onclick="toggleMusic()">🔇</button>
+<audio id="bgm" loop preload="auto">
+  <source src="https://github.com/Jason0x0/tempo/raw/refs/heads/main/bgm.mp3" type="audio/mpeg">
+</audio>
+
+<div class="container">
+  <div class="page active" id="intro-page">
+    <div class="intro">
+      <div class="intro-logo"></div>
+      <h1>泰拉转生</h1>
+      <p class="intro-sub">TERRA REINCARNATION</p>
+      <p>你死了。但命运给了你一次机会——转生到泰拉大陆。<br><br>天灾、矿石病、战争、阴谋...<br>你能活多久？</p>
+      <div class="intro-btns">
+        <button class="ark-btn" onclick="startGame()">开始转生</button>
+        <button class="ark-btn ark-btn-secondary" onclick="quickStart()">随机转生</button>
+      </div>
+      <p class="intro-footer">RHODES ISLAND TERMINAL</p>
+    </div>
+  </div>
+  
+  <div class="page" id="stats-page">
+    <div class="stats-page-header"><h2>分配初始属性</h2><p>你有20点自由属性点，决定你的起点</p></div>
+    <div class="points-left">剩余点数：<span id="points-left">20</span></div>
+    <div id="stats-container"></div>
+    <div class="stats-actions">
+      <button class="ark-btn ark-btn-secondary" onclick="randomStats()">🎲 随机分配</button>
+      <button class="ark-btn" id="next-to-talent-btn" onclick="goToTalentPage()" disabled>下一步</button>
+    </div>
+  </div>
+  
+  <div class="page" id="talent-page">
+    <div class="talent-header"><h2>选择初始天赋</h2><p>命运给予你的馈赠，请选择三项</p></div>
+    <div class="talent-count"><span>已选择</span><div class="talent-count-bar"><div class="talent-count-dot" id="dot-0"></div><div class="talent-count-dot" id="dot-1"></div><div class="talent-count-dot" id="dot-2"></div></div></div>
+    <div class="talent-pool" id="talent-pool"></div>
+    <div class="talent-actions">
+      <button class="ark-btn ark-btn-secondary ark-btn-small" onclick="refreshTalents()">🎲 换一批</button>
+      <button class="ark-btn ark-btn-small" id="confirm-btn" onclick="confirmTalents()" disabled>确认开始</button>
+    </div>
+  </div>
+  
+  <div class="page" id="game-page">
+    <div class="game-header">
+      <div class="age-display"><span class="age-num" id="age-num">0</span><span class="age-label">岁</span></div>
+      <div class="status-tags" id="status-tags"></div>
+    </div>
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="event-log" id="event-log-container"><div class="event-log-inner" id="event-log"></div></div>
+    <button class="ark-btn" id="next-btn" onclick="nextYear()">继续</button>
+  </div>
+  
+  <div class="page" id="ending-page">
+    <div class="ending-page">
+      <div class="ending-header">
+        <div class="ending-icon" id="ending-icon">💀</div>
+        <h1 class="ending-title" id="ending-title">人生终结</h1>
+        <p class="ending-subtitle" id="ending-subtitle">享年0岁</p>
+      </div>
+      <div class="ending-stats" id="ending-stats"></div>
+      <div class="ending-achievements" id="ending-achievements"></div>
+      <div class="ending-card">
+        <div class="ending-section"><div class="ending-label">ORIGIN</div><div class="ending-value" id="ending-origin">-</div></div>
+        <div class="ending-section"><div class="ending-label">CAUSE OF DEATH</div><div class="ending-value" id="ending-death">-</div></div>
+        <div class="ending-section"><div class="ending-label">EPITAPH</div><div class="ending-value" id="ending-epitaph">-</div></div>
+      </div>
+      <div class="ending-summary" id="ending-summary"></div>
+      <button class="ark-btn" onclick="restart()">再次转生</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 音乐控制 =====
+let musicPlaying = false;
+const bgm = document.getElementById('bgm');
+function toggleMusic() {
+  const btn = document.getElementById('music-btn');
+  if (musicPlaying) { bgm.pause(); btn.textContent = '🔇'; btn.classList.remove('playing'); musicPlaying = false; }
+  else {
+    bgm.volume = 0.5;
+    bgm.play().then(() => { btn.textContent = '🔊'; btn.classList.add('playing'); musicPlaying = true; })
+      .catch(() => alert('请先点击页面任意位置，再点击播放按钮'));
+  }
+}
+
+// ===== 数据定义 =====
+const STATS_DEF = [
+  { id: 'looks', name: '颜值', icon: '✨' },
+  { id: 'health', name: '体质', icon: '❤️' },
+  { id: 'intel', name: '智力', icon: '🧠' },
+  { id: 'luck', name: '运气', icon: '🍀' },
+  { id: 'wealth', name: '家境', icon: '💰' },
+];
+
+// 详细地点数据
+const LOCATIONS = {
+  ursus: ['圣骏堡', '涅瓦湖', '切尔诺伯格', '布列洁诺伊', '布列斯克', '中心矿区', '卫星城矿区', '奥洛涅茨矿区', '沃尔格勒矿区', '乌拉尔矿区', '克拉斯矿区', '奥涅加矿区', '格里高利省', '维罗比斯科镇'],
+  kjerag: ['图里卡姆', '少女峰', '马特洪峰', '喀兰峰', '银心湖'],
+  siracusa: ['蒙特卢佩', '七丘城', '怀特城', '拉克玛蒂瓦城', '帕勒莫', '沃尔西尼', '新沃尔西尼'],
+  yan: ['百灶', '邙山镇', '邙山', '姜齐城', '夕城', '黄城', '春都', '花郡', '勾吴城', '婆山镇', '丹燕城', '尚蜀', '数舟峰', '取江峰', '忘水坪', '居奇山', '泥泥峰', '昏谭峰', '别离峰', '梓云峰', '青銮峰', '寻日峰', '玉门', '大荒城'],
+  lungmen: ['新峦区', '流云区', '唐人街', '赤霄区', '码头区', '龙门近卫局', '龙门工业区'],
+  iberia: ['佩尔多尼朵拉', '盐风城', '潮石镇', '格兰法洛', '颂圣棱堡', '港都', '盐漠', '雅隆镇', '汐斯塔'],
+  victoria: ['伦蒂尼姆', '诺丁汉', '曼彻斯特', '塔拉', '布里斯托', '伯明翰', '利物浦', '约克'],
+  columbia: ['哥伦比亚城', '西部荒野', '克洛斯市', '南部港口', '莱茵生命总部', '黑钢国际总部'],
+  kazimierz: ['卡瓦莱利亚竞技场', '骑士城', '大骑士领', '边境区', '工业区', '商业联合会'],
+  laterano: ['拉特兰城', '圣殿区', '天空花园', '公证所', '外围区', '教皇宫'],
+  sargon: ['沙尔-阿加德', '雨林部落', '瓦伊凡联盟', '北部沙漠', '绿洲城', '焚风热土边缘'],
+  rim: ['矿业城', '荒野营地', '边境小镇', '咧嘴谷', '卡特斯聚居地'],
+  sami: ['冰原部落', '萨米森林', '北境前线', '雪祀圣地', '因非冰原边缘'],
+  higashi: ['东国都城', '港口町', '�的屋村', '御山神社', '武士城', '花街'],
+  leithania: ['莱塔尼亚双子城', '音乐学院', '高塔区', '乡村', '巫王旧宫'],
+  kazdel: ['卡兹戴尔废墟', '疤痕商场', '雇佣兵营地', '前线战场', '巴别塔遗址'],
+  bolivar: ['战场前线', '难民营', '临时城镇', '边境哨站'],
+  minos: ['英雄广场', '角斗场', '丰蹄部落', '海港城'],
+};
+
+// 种族数据
+const RACES = [
+  { id: 'feline', name: '菲林', desc: '猫科特征，遍布大陆', nations: ['victoria', 'lungmen', 'yan', 'columbia', 'kazimierz', 'leithania', 'siracusa', 'sami', 'bolivar', 'higashi'], bonus: { looks: 1 } },
+  { id: 'cautus', name: '卡特斯', desc: '兔子特征，活泼敏捷', nations: ['rim', 'columbia', 'victoria'], bonus: { luck: 1 } },
+  { id: 'lupo', name: '鲁珀', desc: '狼族，嗅觉听觉敏锐', nations: ['siracusa', 'victoria', 'ursus'], bonus: { health: 1 }, special: 'lupo' },
+  { id: 'vulpo', name: '沃尔珀', desc: '狐狸特征，灵活敏感', nations: ['siracusa', 'columbia', 'higashi', 'victoria', 'lungmen'], bonus: { looks: 1, intel: 1 } },
+  { id: 'perro', name: '佩洛', desc: '犬族，忠诚憨厚', nations: ['bolivar', 'columbia', 'lungmen', 'victoria'], bonus: { luck: 1 } },
+  { id: 'forte', name: '丰蹄', desc: '牛族特征，体格健硕', nations: ['minos', 'yan', 'kjerag', 'victoria'], bonus: { health: 2 } },
+  { id: 'caprinae', name: '卡普里尼', desc: '羊族，源石技艺天赋', nations: ['leithania', 'sargon', 'victoria'], bonus: { intel: 2 }, special: 'arts_affinity' },
+  { id: 'ursus', name: '乌萨斯', desc: '熊族，力大无穷耐寒', nations: ['ursus', 'kjerag'], bonus: { health: 2 }, special: 'ursus_race' },
+  { id: 'liberi', name: '黎博利', desc: '鸟类特征，轻盈灵活', nations: ['columbia', 'iberia', 'laterano', 'victoria', 'siracusa'], bonus: { intel: 1 } },
+  { id: 'kuranta', name: '库兰塔', desc: '马族，擅长奔跑', nations: ['kazimierz', 'victoria', 'columbia'], bonus: { health: 1 }, special: 'kuranta' },
+  { id: 'elafia', name: '埃拉菲亚', desc: '鹿族，与自然亲和', nations: ['sami', 'ursus', 'kazimierz', 'yan', 'leithania', 'victoria'], bonus: { intel: 1 } },
+  { id: 'zalak', name: '札拉克', desc: '鼠族，身形小巧灵活', nations: ['lungmen', 'kazimierz', 'columbia'], bonus: { luck: 1 }, special: 'zalak' },
+  { id: 'sankta', name: '萨科塔', desc: '天使，头顶光环背生光翼', nations: ['laterano'], bonus: { looks: 1, luck: 1 }, special: 'sankta' },
+  { id: 'sarkaz', name: '萨卡兹', desc: '魔族，源石技艺强大', nations: ['kazdel', 'victoria', 'columbia', 'rim'], bonus: { intel: 1 }, special: 'sarkaz' },
+  { id: 'vouivre', name: '瓦伊凡', desc: '龙族血脉，力量强大', nations: ['sargon', 'columbia', 'victoria', 'lungmen'], bonus: { health: 1, looks: 1 } },
+  { id: 'draco', name: '德拉克', desc: '真正的龙族', nations: ['victoria'], bonus: { intel: 2, looks: 1 }, special: 'draco' },
+  { id: 'aslan', name: '阿斯兰', desc: '狮族，王者血脉', nations: ['victoria', 'sargon'], bonus: { looks: 1, wealth: 1 }, special: 'aslan' },
+  { id: 'lung', name: '龙', desc: '炎国神民', nations: ['yan', 'lungmen'], bonus: { intel: 2, looks: 1 }, special: 'lung' },
+  { id: 'oni', name: '鬼', desc: '东国鬼族，力大嗜酒', nations: ['higashi', 'lungmen'], bonus: { health: 2 }, special: 'oni' },
+  { id: 'aegir', name: '阿戈尔', desc: '海洋种族', nations: ['iberia', 'columbia', 'higashi'], bonus: { health: 1 }, special: 'aegir' },
+  { id: 'archosauria', name: '阿达克利斯', desc: '鳄鱼特征，水中强者', nations: ['sargon', 'columbia'], bonus: { health: 2 } },
+  { id: 'savra', name: '萨弗拉', desc: '蜥蜴特征，丛林居民', nations: ['sargon', 'rim'], bonus: { health: 1 } },
+  { id: 'anura', name: '安努拉', desc: '蛙类特征，潜行大师', nations: ['sargon', 'iberia', 'columbia'], bonus: { intel: 1 } },
+  { id: 'durin', name: '杜林', desc: '矮人族，地下居民', nations: ['columbia', 'victoria'], bonus: { intel: 2 }, special: 'durin' },
+  { id: 'itra', name: '依特拉', desc: '麝类特征，高原居民', nations: ['kjerag'], bonus: { luck: 1 } },
+  { id: 'manticore', name: '曼提柯', desc: '蝎尾狮，天生隐匿', nations: ['sargon'], bonus: { luck: 2 }, special: 'manticore' },
+  { id: 'pilosa', name: '皮洛萨', desc: '树懒特征，动作迟缓但细心', nations: ['columbia', 'rim', 'bolivar'], bonus: { intel: 1 } },
+  { id: 'petram', name: '匹特拉姆', desc: '龟类特征，工艺大师', nations: ['yan', 'victoria', 'iberia', 'columbia'], bonus: { intel: 1 } },
+  { id: 'rebbah', name: '瑞柏巴', desc: '鬣狗特征，群居生活', nations: ['sargon', 'columbia'], bonus: { health: 1 } },
+  { id: 'cerato', name: '塞拉托', desc: '犀牛特征，坚韧不屈', nations: ['sargon', 'minos'], bonus: { health: 2 } },
+];
+
+// 国家数据
+const NATIONS = [
+  { id: 'yan', name: '炎国', desc: '东方古国，真龙统治', baseWealth: 1, danger: 2, races: ['lung', 'feline', 'forte', 'elafia', 'vulpo', 'petram', 'kuranta'] },
+  { id: 'lungmen', name: '龙门', desc: '自治领商业都市，由魏彦吾治理', baseWealth: 2, danger: 2, races: ['feline', 'perro', 'zalak', 'lupo', 'vulpo', 'lung', 'oni', 'vouivre'] },
+  { id: 'victoria', name: '维多利亚', desc: '蒸汽帝国，双王共治，如今内乱', baseWealth: 1, danger: 3, races: ['feline', 'aslan', 'draco', 'sarkaz', 'kuranta', 'vouivre', 'lupo', 'liberi', 'cautus', 'forte', 'elafia', 'caprinae', 'durin', 'petram', 'perro'] },
+  { id: 'ursus', name: '乌萨斯', desc: '冰原帝国，尚武之邦，感染者如同牲畜', baseWealth: -1, danger: 4, races: ['ursus', 'elafia', 'feline', 'lupo'] },
+  { id: 'columbia', name: '哥伦比亚', desc: '资本乐园，自由之地', baseWealth: 2, danger: 2, races: ['liberi', 'vulpo', 'perro', 'sarkaz', 'aegir', 'vouivre', 'cautus', 'durin', 'pilosa', 'kuranta', 'petram', 'anura', 'rebbah', 'zalak', 'archosauria'] },
+  { id: 'kazimierz', name: '卡西米尔', desc: '骑士之国，竞技文化，商业侵蚀', baseWealth: 1, danger: 2, races: ['kuranta', 'elafia', 'zalak', 'feline', 'liberi'] },
+  { id: 'siracusa', name: '叙拉古', desc: '家族纷争，黑帮横行', baseWealth: 0, danger: 4, races: ['lupo', 'vulpo', 'feline', 'liberi'] },
+  { id: 'rim', name: '雷姆必拓', desc: '矿业荒野，卡特斯的家乡', baseWealth: 1, danger: 3, races: ['cautus', 'savra', 'feline', 'pilosa', 'sarkaz'] },
+  { id: 'sargon', name: '萨尔贡', desc: '丛林沙漠帝国，瓦伊凡联盟', baseWealth: 0, danger: 4, races: ['archosauria', 'savra', 'anura', 'vouivre', 'caprinae', 'aslan', 'manticore', 'rebbah', 'cerato'] },
+  { id: 'iberia', name: '伊比利亚', desc: '深海诅咒之地，大静谧后遗症', baseWealth: 0, danger: 4, races: ['liberi', 'aegir', 'anura', 'petram'] },
+  { id: 'laterano', name: '拉特兰', desc: '天使之城，圣铳之国，铳械圣地', baseWealth: 2, danger: 1, races: ['sankta', 'liberi'] },
+  { id: 'kjerag', name: '谢拉格', desc: '雪山圣地，耶拉冈德庇护', baseWealth: 1, danger: 2, races: ['ursus', 'forte', 'itra', 'elafia', 'feline'] },
+  { id: 'sami', name: '萨米', desc: '极北苔原，对抗邪魔前线', baseWealth: -1, danger: 5, races: ['elafia', 'feline', 'liberi'] },
+  { id: 'minos', name: '米诺斯', desc: '英雄之地，丰蹄故乡', baseWealth: 1, danger: 2, races: ['forte', 'feline', 'cerato'] },
+  { id: 'higashi', name: '东国', desc: '武士之国，鬼族出没', baseWealth: 1, danger: 3, races: ['oni', 'vulpo', 'aegir', 'feline', 'liberi'] },
+  { id: 'leithania', name: '莱塔尼亚', desc: '魔法之国，音乐之邦，巫王统治过', baseWealth: 1, danger: 2, races: ['caprinae', 'elafia', 'feline', 'liberi'] },
+  { id: 'kazdel', name: '卡兹戴尔', desc: '魔族故土，战火纷飞，雇佣兵摇篮', baseWealth: -2, danger: 5, races: ['sarkaz'] },
+  { id: 'bolivar', name: '玻利瓦尔', desc: '内乱之地，难民遍野', baseWealth: -1, danger: 4, races: ['perro', 'feline', 'pilosa', 'liberi'] },
+];
+
+// 天赋数据
+const TALENTS = [
+  // 传说级
+  { id: 'doctor_soul', name: '残存的记忆', desc: '你的灵魂深处有一段模糊的记忆...与一艘方舟有关', icon: '🧠', rarity: 'legend', effect: { intel: 3 }, special: 'doctor' },
+  { id: 'originium_prime', name: '原生源石适性', desc: '你与源石有天然的亲和力，足以成为顶尖术师', icon: '💎', rarity: 'legend', effect: { intel: 2, health: -1 }, special: 'arts_master' },
+  { id: 'calamity_chosen', name: '天灾信使', desc: '你能感知天灾的来临，预警他人', icon: '🌪️', rarity: 'legend', effect: { luck: 3 }, special: 'calamity' },
+  { id: 'nobility', name: '古老贵族血统', desc: '你出身于泰拉古老贵族，可以追溯到神民时代', icon: '👑', rarity: 'legend', effect: { wealth: 4, looks: 1 } },
+  { id: 'immortal_body', name: '不老体质', desc: '你的身体拥有超常的生命力，如同"长生者"', icon: '♾️', rarity: 'legend', effect: { health: 3 }, special: 'immortal' },
+  { id: 'deep_hunter', name: '深海猎人血脉', desc: '你体内流淌着对抗海嗣的力量', icon: '🔱', rarity: 'legend', effect: { health: 2, intel: 1 }, special: 'deep_hunter' },
+  { id: 'beast_lord', name: '兽主之友', desc: '你与某位兽主有着神秘的联系', icon: '🐺', rarity: 'legend', effect: { luck: 2 }, special: 'beast_lord' },
+  { id: 'babel_memory', name: '巴别塔遗产', desc: '你的灵魂与巴别塔的历史有关', icon: '🗼', rarity: 'legend', effect: { intel: 2, luck: 1 }, special: 'babel' },
+  // 稀有级
+  { id: 'arts_talent', name: '源石技艺天赋', desc: '你对源石技艺有惊人天赋', icon: '✨', rarity: 'rare', effect: { intel: 2 }, special: 'arts' },
+  { id: 'combat_prodigy', name: '战斗天才', desc: '你天生适合战场', icon: '⚔️', rarity: 'rare', effect: { health: 2 }, special: 'combat' },
+  { id: 'charisma', name: '天生魅力', desc: '人们总被你吸引', icon: '💫', rarity: 'rare', effect: { looks: 2, luck: 1 } },
+  { id: 'infection_resist', name: '矿石病抗性', desc: '你对源石有天然抗性', icon: '🛡️', rarity: 'rare', effect: { health: 1 }, special: 'resist' },
+  { id: 'deep_sea', name: '深海的呼唤', desc: '你的灵魂回响着海底的歌声', icon: '🌊', rarity: 'rare', effect: { health: 1 }, special: 'abyssal' },
+  { id: 'survivor', name: '幸存者', desc: '无论如何你总能活下来', icon: '🔥', rarity: 'rare', effect: { luck: 2, health: 1 } },
+  { id: 'u_official', name: 'U-Official认证', desc: '你与源石虫有神秘的缘分', icon: '🪳', rarity: 'rare', effect: { luck: 1 }, special: 'originium_slug' },
+  { id: 'penguin_bond', name: '企鹅物流内推', desc: '你认识龙门的企鹅物流成员', icon: '🐧', rarity: 'rare', effect: { wealth: 1 }, special: 'penguin' },
+  { id: 'chernobog_exp', name: '切尔诺伯格经历', desc: '你或你的家人与那座城市有关', icon: '❄️', rarity: 'rare', effect: { luck: -1 }, special: 'chernobog' },
+  { id: 'siracusan_blood', name: '叙拉古血脉', desc: '你的家族与某个家族有联系', icon: '🔫', rarity: 'rare', effect: { luck: 1 }, special: 'siracusa' },
+  { id: 'rhine_intern', name: '莱茵生命实习生', desc: '你与哥伦比亚的科研机构有联系', icon: '🔬', rarity: 'rare', effect: { intel: 2 }, special: 'rhine' },
+  { id: 'laterano_faith', name: '拉特兰信仰', desc: '你虔诚信仰拉特兰宗教', icon: '✝️', rarity: 'rare', effect: { luck: 1 }, special: 'laterano_faith' },
+  { id: 'karlan_trade', name: '喀兰贸易关系', desc: '你与谢拉格喀兰商会有往来', icon: '🏔️', rarity: 'rare', effect: { wealth: 2 }, special: 'karlan' },
+  { id: 'blacksteel', name: '黑钢国际背景', desc: '你与黑钢国际有关系', icon: '🛡️', rarity: 'rare', effect: { health: 1, wealth: 1 }, special: 'blacksteel' },
+  { id: 'tianshifu', name: '天师府背景', desc: '你与炎国天师府有联系', icon: '⚡', rarity: 'rare', effect: { intel: 2 }, special: 'tianshifu' },
+  { id: 'kazimierz_knight', name: '骑士血统', desc: '你的祖先是卡西米尔骑士', icon: '🏇', rarity: 'rare', effect: { health: 1, looks: 1 }, special: 'knight_blood' },
+  { id: 'abyssal_hunter', name: '猎人印记', desc: '你身上有阿戈尔深海猎人的印记', icon: '🌊', rarity: 'rare', effect: { health: 2 }, special: 'abyssal_hunter' },
+  { id: 'leithanian_arts', name: '莱塔尼亚源石技艺传承', desc: '你学习过莱塔尼亚的音乐法术', icon: '🎵', rarity: 'rare', effect: { intel: 2 }, special: 'leithanian_arts' },
+  { id: 'glasgow_gang', name: '格拉斯哥帮关系', desc: '你认识维多利亚的某个帮派', icon: '🎸', rarity: 'rare', effect: { luck: 1, wealth: 1 }, special: 'glasgow' },
+  { id: 'reunion_sympathy', name: '整合运动同情者', desc: '你对感染者的处境深感同情', icon: '🔥', rarity: 'rare', effect: { luck: -1 }, special: 'reunion_sympathy' },
+  // 普通级
+  { id: 'healthy', name: '健壮', desc: '身体素质很好', icon: '💪', effect: { health: 2 } },
+  { id: 'smart', name: '聪明', desc: '脑子比别人转得快', icon: '💡', effect: { intel: 2 } },
+  { id: 'pretty', name: '好看', desc: '长得挺好看', icon: '🌸', effect: { looks: 2 } },
+  { id: 'lucky', name: '幸运', desc: '运气不错', icon: '🍀', effect: { luck: 2 } },
+  { id: 'rich_family', name: '小康之家', desc: '家庭条件不错', icon: '🏠', effect: { wealth: 2 } },
+  { id: 'optimist', name: '乐天派', desc: '总是很乐观', icon: '😊', effect: { luck: 1, health: 1 } },
+  { id: 'social', name: '社交达人', desc: '很会和人打交道', icon: '🤝', effect: { looks: 1, luck: 1 } },
+  { id: 'merchant', name: '商业头脑', desc: '有做生意的天赋', icon: '💰', effect: { wealth: 1, intel: 1 } },
+  { id: 'craftsman', name: '工匠血统', desc: '手艺传家', icon: '🔨', effect: { intel: 1, wealth: 1 } },
+  { id: 'athlete', name: '运动天赋', desc: '天生的运动员', icon: '🏃', effect: { health: 2 } },
+  { id: 'night_owl', name: '夜行者', desc: '在夜间更活跃', icon: '🦉', effect: { intel: 1, luck: 1 } },
+  { id: 'quick_learner', name: '快速学习', desc: '学东西很快', icon: '📚', effect: { intel: 2 } },
+  // 负面级
+  { id: 'weak', name: '体弱多病', desc: '身体很差', icon: '🤒', rarity: 'bad', effect: { health: -2 } },
+  { id: 'stupid', name: '笨', desc: '不太聪明...', icon: '🤡', rarity: 'bad', effect: { intel: -2 } },
+  { id: 'ugly', name: '长得抱歉', desc: '颜值堪忧', icon: '👹', rarity: 'bad', effect: { looks: -2 } },
+  { id: 'unlucky', name: '倒霉蛋', desc: '运气烂透了', icon: '💀', rarity: 'bad', effect: { luck: -2 } },
+  { id: 'poor', name: '家徒四壁', desc: '家庭一贫如洗', icon: '🪹', rarity: 'bad', effect: { wealth: -2 } },
+  { id: 'cursed', name: '被诅咒的', desc: '有什么不好的东西跟着你', icon: '👁️', rarity: 'bad', effect: { luck: -3 }, special: 'cursed' },
+  { id: 'infected_born', name: '先天感染者', desc: '出生时就携带矿石病', icon: '💎', rarity: 'bad', effect: { health: -1 }, special: 'infected_birth' },
+  { id: 'orphan', name: '孤儿', desc: '没有父母', icon: '😢', rarity: 'bad', effect: { wealth: -2, luck: -1 } },
+  { id: 'coward', name: '胆小鬼', desc: '很容易害怕', icon: '😰', rarity: 'bad', effect: { luck: -1 } },
+  { id: 'sickly', name: '先天疾病', desc: '有遗传性疾病', icon: '💊', rarity: 'bad', effect: { health: -2 } },
+  { id: 'target', name: '被盯上了', desc: '有人在暗中注视着你', icon: '🎯', rarity: 'bad', effect: { luck: -2 }, special: 'target' },
+];
+
+// ===== 状态 =====
+let state = {};
+
+// ===== 工具函数 =====
+const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const pick = arr => arr[rand(0, arr.length - 1)];
+const pickN = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+const chance = p => Math.random() * 100 < p;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const showPage = id => { document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); };
+const addStat = (id, v) => { state.stats[id] = clamp(state.stats[id] + v, 0, 10); };
+const getLoc = () => LOCATIONS[state.nation.id] ? pick(LOCATIONS[state.nation.id]) : state.nation.name;
+
+// ===== 游戏流程 =====
+function startGame() {
+  state = { baseStats: { looks: 0, health: 0, intel: 0, luck: 0, wealth: 0 }, stats: { looks: 0, health: 0, intel: 0, luck: 0, wealth: 0 }, points: 20, age: 0, nation: null, race: null, talents: [], selectedTalents: [], talentPool: [], infected: false, dead: false, deathCause: '', events: [], flags: {}, achievements: [], location: '' };
+  initStatsPage(); showPage('stats-page');
+}
+
+function initStatsPage() { state.baseStats = { looks: 0, health: 0, intel: 0, luck: 0, wealth: 0 }; state.points = 20; renderStatsPage(); }
+
+function renderStatsPage() {
+  document.getElementById('stats-container').innerHTML = STATS_DEF.map(s => `<div class="stat-row"><div class="stat-row-name">${s.icon} ${s.name}</div><div class="stat-row-bar">${Array(10).fill(0).map((_, i) => `<div class="stat-dot ${i < state.baseStats[s.id] ? 'filled' : ''}"></div>`).join('')}</div><div class="stat-row-btns"><button class="stat-btn" onclick="changeStat('${s.id}', -1)" ${state.baseStats[s.id] <= 0 ? 'disabled' : ''}>-</button><button class="stat-btn" onclick="changeStat('${s.id}', 1)" ${state.baseStats[s.id] >= 10 || state.points <= 0 ? 'disabled' : ''}>+</button></div></div>`).join('');
+  document.getElementById('points-left').textContent = state.points;
+  document.getElementById('next-to-talent-btn').disabled = state.points > 0;
+}
+
+function changeStat(id, delta) { const nv = state.baseStats[id] + delta; if (nv < 0 || nv > 10) return; if (delta > 0 && state.points <= 0) return; state.baseStats[id] = nv; state.points -= delta; renderStatsPage(); }
+
+function randomStats() { STATS_DEF.forEach(s => state.baseStats[s.id] = 0); state.points = 20; while (state.points > 0) { const s = pick(STATS_DEF); if (state.baseStats[s.id] < 10) { state.baseStats[s.id]++; state.points--; } } renderStatsPage(); }
+
+function goToTalentPage() { state.selectedTalents = []; refreshTalents(); showPage('talent-page'); }
+
+function refreshTalents() {
+  const legends = TALENTS.filter(t => t.rarity === 'legend'), rares = TALENTS.filter(t => t.rarity === 'rare'), normals = TALENTS.filter(t => !t.rarity), bads = TALENTS.filter(t => t.rarity === 'bad');
+  let pool = []; if (chance(10)) pool.push(pick(legends)); pool.push(...pickN(rares, rand(2, 4))); pool.push(...pickN(bads, rand(2, 3))); while (pool.length < 12) { const t = pick(normals); if (!pool.find(p => p.id === t.id)) pool.push(t); }
+  state.talentPool = pool.sort(() => Math.random() - 0.5); state.selectedTalents = []; renderTalentPool();
+}
+
+function renderTalentPool() {
+  document.getElementById('talent-pool').innerHTML = state.talentPool.map(t => {
+    const sel = state.selectedTalents.includes(t.id), dis = !sel && state.selectedTalents.length >= 3;
+    let rc = '', rt = '普通'; if (t.rarity === 'legend') { rc = 'legend'; rt = '传说'; } else if (t.rarity === 'rare') { rc = 'rare'; rt = '稀有'; } else if (t.rarity === 'bad') { rc = 'bad'; rt = '负面'; }
+    let ef = t.effect ? Object.entries(t.effect).map(([k, v]) => { const s = STATS_DEF.find(x => x.id === k); return `${s.name}${v > 0 ? '+' : ''}${v}`; }).join(' ') : '';
+    return `<div class="talent-card ${sel ? 'selected' : ''} ${dis ? 'disabled' : ''}" onclick="toggleTalent('${t.id}')"><div class="talent-icon">${t.icon}</div><div class="talent-info"><div class="talent-name">${t.name}<span class="talent-rarity ${rc}">${rt}</span></div><div class="talent-desc">${t.desc}</div>${ef ? `<div class="talent-effect ${t.rarity === 'bad' ? 'negative' : ''}">${ef}</div>` : ''}</div></div>`;
+  }).join('');
+  for (let i = 0; i < 3; i++) document.getElementById(`dot-${i}`).classList.toggle('filled', i < state.selectedTalents.length);
+  document.getElementById('confirm-btn').disabled = state.selectedTalents.length !== 3;
+}
+
+function toggleTalent(id) { const i = state.selectedTalents.indexOf(id); if (i >= 0) state.selectedTalents.splice(i, 1); else if (state.selectedTalents.length < 3) state.selectedTalents.push(id); renderTalentPool(); }
+
+function confirmTalents() { state.talents = state.selectedTalents.map(id => TALENTS.find(t => t.id === id)); startLife(); }
+
+function quickStart() {
+  state = { baseStats: { looks: 0, health: 0, intel: 0, luck: 0, wealth: 0 }, stats: { looks: 0, health: 0, intel: 0, luck: 0, wealth: 0 }, points: 20, age: 0, nation: null, race: null, talents: [], selectedTalents: [], talentPool: [], infected: false, dead: false, deathCause: '', events: [], flags: {}, achievements: [], location: '' };
+  randomStats(); refreshTalents(); state.selectedTalents = state.talentPool.slice(0, 3).map(t => t.id); state.talents = state.selectedTalents.map(id => TALENTS.find(t => t.id === id)); startLife();
+}
+
+// ===== 开始人生 =====
+function startLife() {
+  state.stats = { ...state.baseStats }; state.age = 0; state.infected = false; state.dead = false; state.deathCause = ''; state.events = []; state.flags = {}; state.achievements = [];
+  state.nation = pick(NATIONS);
+  const availableRaces = RACES.filter(r => state.nation.races.includes(r.id));
+  state.race = availableRaces.length > 0 ? pick(availableRaces) : pick(RACES);
+  state.location = getLoc();
+  
+  // 应用加成
+  if (state.race.bonus) Object.entries(state.race.bonus).forEach(([k, v]) => addStat(k, v));
+  addStat('wealth', state.nation.baseWealth);
+  state.talents.forEach(t => {
+    if (t.effect) Object.entries(t.effect).forEach(([k, v]) => addStat(k, v));
+    if (t.special === 'infected_birth') { state.infected = true; state.flags.infected_birth = true; }
+    if (t.special) state.flags[`talent_${t.special}`] = true;
+  });
+  
+  // 种族特殊
+  if (state.race.special === 'sarkaz' && chance(30)) state.infected = true;
+  if (state.race.special === 'sankta') state.flags.is_sankta = true;
+  if (state.race.special === 'lung') state.flags.is_lung = true;
+  if (state.race.special === 'oni') state.flags.is_oni = true;
+  if (state.race.special === 'aegir') state.flags.is_aegir = true;
+  if (state.race.special === 'durin') state.flags.is_durin = true;
+  if (state.race.special === 'lupo') state.flags.is_lupo = true;
+  if (state.race.special === 'kuranta') state.flags.is_kuranta = true;
+  if (state.race.special === 'manticore') state.flags.is_manticore = true;
+  if (state.race.special === 'draco') state.flags.is_draco = true;
+  if (state.race.special === 'aslan') state.flags.is_aslan = true;
+  
+  // 出生事件
+  addEvent(`你出生在${state.nation.name}的${state.location}，是一个${state.race.name}。`);
+  addEvent(`${state.nation.desc}。`);
+  
+  // 国家特色初始描述
+  nationBirthEvents();
+  
+  if (state.stats.wealth >= 8) addEvent('你的家族非常富有，住在豪宅里。', 'good');
+  else if (state.stats.wealth >= 6) addEvent('你的家庭条件不错，生活无忧。', 'good');
+  else if (state.stats.wealth <= 2) addEvent('你的家庭一贫如洗，住在贫民窟。', 'bad');
+  else if (state.stats.wealth <= 4) addEvent('你的家庭条件一般，勉强温饱。');
+  
+  state.talents.forEach(t => {
+    const c = t.rarity === 'bad' ? 'bad' : (t.rarity === 'legend' ? 'legendary' : (t.rarity === 'rare' ? 'special' : 'good'));
+    addEvent(`【${t.name}】${t.desc}`, c);
+  });
+  
+  if (state.infected) {
+    addEvent('你出生时就携带了矿石病...体内有源石结晶。', 'bad');
+    nationInfectedReaction();
+  }
+  
+  // 种族特殊描述
+  raceSpecialBirth();
+  
+  showPage('game-page'); renderGame();
+}
+
+function nationBirthEvents() {
+  const n = state.nation.id;
+  if (n === 'ursus') addEvent('乌萨斯的冬天漫长而寒冷，感染者被视为牲畜。');
+  if (n === 'lungmen') addEvent('龙门是繁华的自治领，魏彦吾大人治理着这座城市。');
+  if (n === 'siracusa') addEvent('叙拉古的街头充斥着家族火拼的硝烟。');
+  if (n === 'laterano') addEvent('拉特兰是天使之国，烟花与圣铳是这里的象征。');
+  if (n === 'yan') addEvent('炎国幅员辽阔，真龙的传说流传千年。');
+  if (n === 'iberia') addEvent('伊比利亚曾经辉煌，如今却被大静谧的阴影笼罩。');
+  if (n === 'kazdel') addEvent('卡兹戴尔是战火纷飞的废墟，萨卡兹的故土。');
+  if (n === 'kjerag') addEvent('谢拉格被雪山环绕，耶拉冈德的神力庇护着这片土地。');
+  if (n === 'kazimierz') addEvent('卡西米尔是骑士之国，竞技场是荣耀与金钱的象征。');
+  if (n === 'sami') addEvent('萨米是极北的苔原，萨米人在这里对抗邪魔。');
+  if (n === 'columbia') addEvent('哥伦比亚是自由之地，资本与科技在这里交织。');
+  if (n === 'victoria') addEvent('维多利亚正处于内乱之中，蒸汽帝国摇摇欲坠。');
+  if (n === 'sargon') addEvent('萨尔贡的丛林和沙漠中隐藏着无数秘密。');
+  if (n === 'higashi') addEvent('东国是武士之国，鬼族在这里有着特殊的地位。');
+  if (n === 'leithania') addEvent('莱塔尼亚是魔法与音乐之国，巫王曾统治这里。');
+  if (n === 'minos') addEvent('米诺斯是英雄之地，丰蹄们在这里追求荣耀。');
+  if (n === 'rim') addEvent('雷姆必拓是矿业之地，卡特斯们在这里繁衍生息。');
+  if (n === 'bolivar') addEvent('玻利瓦尔内战不断，民不聊生。');
+}
+
+function nationInfectedReaction() {
+  const n = state.nation.id;
+  if (n === 'ursus') addEvent('在乌萨斯，感染者的命运只有死亡、逃亡或成为奴隶。', 'bad');
+  if (n === 'laterano') addEvent('在拉特兰，感染者会被驱逐，无法享受圣光的庇护。', 'bad');
+  if (n === 'kazimierz') addEvent('在卡西米尔，感染者被禁止参加正式竞技。', 'bad');
+  if (n === 'victoria') addEvent('维多利亚对感染者的态度复杂，取决于你的阶级。');
+  if (n === 'columbia') addEvent('哥伦比亚相对宽容，但感染者依然是二等公民。');
+  if (n === 'kazdel') addEvent('在卡兹戴尔，感染者反而是常态，不会受到额外歧视。', 'good');
+  if (n === 'lungmen') addEvent('龙门的管理相对人道，但感染者依然需要小心。');
+  if (n === 'yan') addEvent('炎国对感染者态度各地不一，但总体上比乌萨斯好得多。');
+  if (n === 'iberia') addEvent('伊比利亚有更多的事情要担心...比如深海的威胁。');
+}
+
+function raceSpecialBirth() {
+  if (state.flags.is_sankta) addEvent('你头顶的光环闪耀着圣洁的光芒，背后的光翼若隐若现。', 'special');
+  if (state.flags.is_lung && state.nation.id === 'yan') addEvent('作为龙族后裔，你在炎国地位崇高，祖先与真龙有关。', 'good');
+  if (state.flags.is_oni) addEvent('你头上的角是鬼族力量的象征，你天生力大无穷。', 'special');
+  if (state.flags.is_aegir) addEvent('你需要保持皮肤湿润，干燥的环境让你不适。');
+  if (state.flags.is_durin) addEvent('你身材矮小，经常被当成小孩子。');
+  if (state.flags.is_lupo && state.nation.id === 'siracusa') addEvent('作为叙拉古的鲁珀，家族纽带对你至关重要。');
+  if (state.flags.is_manticore) addEvent('你天生具有隐匿自己存在的能力。', 'special');
+  if (state.flags.is_draco) addEvent('作为德拉克，你是维多利亚最古老的种族之一。', 'special');
+  if (state.flags.is_aslan) addEvent('狮族的血统流淌在你体内，你是天生的王者。', 'special');
+  
+  if (state.flags.talent_doctor && chance(30)) { addEvent('你时常做一个奇怪的梦，梦里有个白色的身影在呼唤你...', 'legendary'); state.flags.priestess_dream = true; }
+  if (state.flags.talent_originium_slug) addEvent('你发现自己对源石虫有奇特的亲和力，它们不怕你。', 'special');
+  if (state.flags.talent_beast_lord) { addEvent('你出生时，一只奇异的动物出现在窗外看着你...', 'legendary'); state.flags.beast_contact = true; }
+  if (state.flags.talent_babel) { addEvent('你的灵魂深处有一段关于巴别塔的记忆...', 'legendary'); }
+  if (state.flags.talent_target) { addEvent('你总觉得有人在暗中注视着你...', 'bad'); }
+}
+
+function addEvent(text, type = '') { state.events.push({ age: state.age, text, type }); }
+function addAchievement(name, rare = false) { if (!state.achievements.find(a => a.name === name)) state.achievements.push({ name, rare }); }
+
+function renderGame() {
+  document.getElementById('age-num').textContent = state.age;
+  let tags = '';
+  if (state.infected) tags += '<span class="status-tag infected">感染者</span>';
+  if (state.flags.rhodes) tags += '<span class="status-tag rhodes">罗德岛</span>';
+  if (state.flags.knight) tags += '<span class="status-tag special">骑士</span>';
+  if (state.flags.penguin) tags += '<span class="status-tag special">企鹅物流</span>';
+  if (state.flags.reunion) tags += '<span class="status-tag danger">整合运动</span>';
+  if (state.flags.deep_hunter_active) tags += '<span class="status-tag cyan">深海猎人</span>';
+  if (state.flags.blacksteel_member) tags += '<span class="status-tag green">黑钢</span>';
+  if (state.flags.tianshifu_member) tags += '<span class="status-tag special">天师府</span>';
+  if (state.flags.fallen) tags += '<span class="status-tag danger">堕天使</span>';
+  if (state.flags.glasgow_member) tags += '<span class="status-tag special">格拉斯哥</span>';
+  if (state.flags.rhine_employee) tags += '<span class="status-tag cyan">莱茵生命</span>';
+  document.getElementById('status-tags').innerHTML = tags;
+  document.getElementById('stats-bar').innerHTML = STATS_DEF.map(s => { const v = state.stats[s.id]; const c = v <= 2 ? 'low' : (v >= 8 ? 'high' : ''); return `<div class="stat-item"><div class="stat-icon">${s.icon}</div><div class="stat-value ${c}">${v}</div><div class="stat-name">${s.name}</div></div>`; }).join('');
+  const log = document.getElementById('event-log'), container = document.getElementById('event-log-container');
+  log.innerHTML = state.events.map(e => `<div class="event-item"><div class="event-age">${e.age}</div><div class="event-text ${e.type}">${e.text}</div></div>`).join('');
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+  document.getElementById('next-btn').textContent = state.dead ? '查看结局' : '继续';
+}
+
+// ===== 年度事件系统 =====
+function nextYear() {
+  if (state.dead) { showEnding(); return; }
+  state.age++;
+  
+  // 根据年龄段和随机数决定事件
+  if (state.age <= 3) babyEvents();
+  else if (state.age <= 12) childEvents();
+  else if (state.age <= 18) teenEvents();
+  else if (state.age <= 35) youngAdultEvents();
+  else if (state.age <= 55) middleAgeEvents();
+  else elderEvents();
+  
+  // 检查各种条件
+  if (!state.dead) {
+    checkDisaster();
+    checkInfection();
+    checkSpecialEvents();
+    checkCharacterEncounters();
+    checkDeath();
+  }
+  renderGame();
+}
+
+// ===== 婴儿期事件 =====
+function babyEvents() {
+  if (state.stats.health <= 2 && chance(30)) {
+    addEvent('你体弱多病，在襁褓中挣扎...', 'bad');
+    if (chance(40)) { state.dead = true; state.deathCause = '婴儿时期体弱夭折'; return; }
+  }
+  
+  const n = state.nation.id;
+  const loc = state.location;
+  
+  // 国家特色事件
+  if (n === 'kazdel' && chance(25)) { addEvent('战火的声音是你的摇篮曲。炮火照亮了夜空。', 'bad'); return; }
+  if (n === 'ursus' && chance(20)) { addEvent('乌萨斯的冬天格外寒冷，你差点冻死。', 'bad'); if (chance(20)) addStat('health', -1); return; }
+  if (n === 'laterano' && chance(20)) { addEvent('烟花和爆炸声伴随着你的成长，这是拉特兰的日常。', 'good'); return; }
+  if (n === 'kjerag' && chance(20)) { addEvent('从窗户望出去，喀兰峰巍峨耸立，银心湖波光粼粼。', 'good'); return; }
+  if (n === 'sami' && chance(20)) { addEvent('极光照亮了萨米的夜空，母亲给你唱古老的歌谣。'); return; }
+  if (n === 'iberia' && chance(20)) { addEvent('海风带来咸涩的味道，偶尔能听到远处诡异的歌声...'); return; }
+  if (n === 'lungmen' && chance(20)) { addEvent('龙门的霓虹灯彻夜不灭，这是一座不夜城。'); return; }
+  if (n === 'yan' && chance(20)) { addEvent(`${loc}的风景秀丽，你在这里度过了平静的婴儿期。`); return; }
+  if (n === 'victoria' && chance(20)) { addEvent('维多利亚的蒸汽机声伴随着你的童年。'); return; }
+  if (n === 'columbia' && chance(20)) { addEvent('哥伦比亚的城市灯火辉煌，到处是机会和挑战。'); return; }
+  if (n === 'siracusa' && chance(20)) { addEvent('叙拉古的夜晚不太平静，远处偶尔传来枪声。', 'bad'); return; }
+  if (n === 'kazimierz' && chance(20)) { addEvent('竞技场的欢呼声甚至能传到婴儿床边。'); return; }
+  if (n === 'minos' && chance(20)) { addEvent('米诺斯的海风轻柔，英雄的传说伴你入眠。'); return; }
+  if (n === 'higashi' && chance(20)) { addEvent('东国的樱花飘落在庭院中。'); return; }
+  if (n === 'leithania' && chance(20)) { addEvent('莱塔尼亚的音乐从远处的塔楼传来。'); return; }
+  if (n === 'sargon' && chance(20)) { addEvent('萨尔贡的雨林潮湿闷热，各种虫鸣此起彼伏。'); return; }
+  if (n === 'rim' && chance(20)) { addEvent('雷姆必拓的风沙吹过营地。'); return; }
+  if (n === 'bolivar' && chance(25)) { addEvent('玻利瓦尔的战火让你的童年充满不安。', 'bad'); return; }
+  
+  addEvent(pick([
+    '你学会了爬行。', '你开始牙牙学语。', '你第一次叫出了妈妈。',
+    '你是个安静的婴儿。', '你特别爱哭，邻居们很头疼。',
+    '你对周围的一切充满好奇。', '你开始认识这个世界。',
+    '你喜欢抓着大人的手指玩。', '你第一次尝试站立。',
+    '你第一次发出了笑声。', '你第一次吃到了辅食。'
+  ]));
+}
+
+// ===== 童年期事件 =====
+function childEvents() {
+  const n = state.nation.id;
+  const loc = state.location;
+  
+  // 乌萨斯特色事件
+  if (n === 'ursus') {
+    if (chance(10)) { addEvent('你目睹了士兵殴打感染者。这是乌萨斯的日常。', 'bad'); state.flags.ursus_trauma = true; return; }
+    if (chance(8) && (loc.includes('矿区') || chance(30))) { addEvent(`你在${loc}附近看到了矿工们艰苦的生活。`, 'bad'); return; }
+    if (chance(6) && loc === '切尔诺伯格') { addEvent('切尔诺伯格是个繁华的城市，但你总觉得有什么不对。'); state.flags.in_chernobog = true; return; }
+    if (chance(5) && loc === '涅瓦湖') { addEvent('涅瓦湖的景色很美，但湖水冰冷刺骨。'); return; }
+    if (chance(5)) { addEvent('你听说了"乌萨斯学生自治团"的故事，那些孩子们的命运让你恐惧。'); return; }
+    if (chance(4) && loc === '圣骏堡') { addEvent('圣骏堡的皇宫远远望去金碧辉煌，但那与你无关。'); return; }
+  }
+  
+  // 叙拉古特色事件
+  if (n === 'siracusa') {
+    if (chance(12)) { addEvent(`你目睹了两个家族在${loc}街头火拼。枪声四起。`, 'bad'); return; }
+    if (chance(10) && state.flags.is_lupo) { addEvent('你的一位亲人被卷入家族纷争，生死不明。', 'bad'); state.flags.family_feud = true; return; }
+    if (chance(8)) { addEvent('你听说了德克萨斯家族的传说，那是叙拉古最强大的家族之一。', 'special'); return; }
+    if (chance(6) && loc === '沃尔西尼') { addEvent('沃尔西尼和新沃尔西尼之间的紧张局势让人担忧。'); return; }
+    if (chance(5) && loc === '七丘城') { addEvent('七丘城的政治斗争波及到了普通人的生活。'); return; }
+    if (chance(5)) { addEvent('你学会了一些在叙拉古生存的技巧：如何辨别危险，如何保持沉默。'); addStat('luck', 1); return; }
+    if (chance(4)) { addEvent('你听说拉普兰德的名字，传说她是最疯狂的杀手。'); return; }
+  }
+  
+  // 拉特兰特色事件
+  if (n === 'laterano') {
+    if (chance(12)) { addEvent('你第一次参加了拉特兰的节日庆典，烟花与爆炸让你兴奋不已！', 'good'); return; }
+    if (chance(10) && state.flags.is_sankta) { addEvent('你开始学习使用弓弩，为获得守护铳做准备。'); return; }
+    if (chance(8) && loc === '天空花园') { addEvent('天空花园里的甜点让你流连忘返。', 'good'); return; }
+    if (chance(6)) { addEvent('你看到了教宗骑士的威严队列。', 'special'); return; }
+    if (chance(5) && loc === '圣殿区') { addEvent('圣殿区的壮丽建筑让你心生敬畏。'); return; }
+    if (chance(4)) { addEvent('你听说了安洁莉娜的名字，她是拉特兰著名的使者。'); return; }
+  }
+  
+  // 卡西米尔特色事件
+  if (n === 'kazimierz') {
+    if (chance(14)) { addEvent('你第一次观看了卡瓦莱利亚竞技场的骑士比赛，被骑士们的英姿深深吸引！', 'good'); state.flags.knight_dream = true; return; }
+    if (chance(10) && loc === '大骑士领') { addEvent('大骑士领的商人来到你的城镇，带来了各种新奇商品。'); return; }
+    if (chance(8)) { addEvent('你听说了感染者骑士的悲惨故事，商业联合会不允许他们参赛。', 'bad'); return; }
+    if (chance(6) && state.flags.is_kuranta) { addEvent('作为库兰塔，你开始练习骑术。'); addStat('health', 1); return; }
+    if (chance(5)) { addEvent('你崇拜"耀骑士"临光，梦想成为像她那样的骑士。'); state.flags.nearl_fan = true; return; }
+    if (chance(4)) { addEvent('你听说了白金的传说，她曾是一名刺客。'); return; }
+  }
+  
+  // 炎国特色事件
+  if (n === 'yan' || n === 'lungmen') {
+    if (chance(10)) { addEvent('你听长辈讲述真龙的传说，那是炎国的守护神。', 'special'); return; }
+    if (chance(8) && n === 'lungmen') { addEvent('龙门的赤霄区灯火辉煌，但唐人街的生活更加真实。'); return; }
+    if (chance(7)) { addEvent(`你在${loc}度过了愉快的童年。`); return; }
+    if (chance(6) && state.flags.is_lung) { addEvent('作为龙族后裔，你接受了特殊的教育。', 'good'); addStat('intel', 1); return; }
+    if (chance(5) && loc === '大荒城') { addEvent('大荒城附近传说有巨兽出没，大人们不让你靠近。'); return; }
+    if (chance(5) && loc === '姜齐城') { addEvent('姜齐城的天师府是神秘的存在，你曾远远望见穿白袍的天师。'); return; }
+    if (chance(4) && loc === '夕城') { addEvent('夕城有很多关于古代的传说，你听得入迷。'); return; }
+    if (chance(4) && n === 'lungmen') { addEvent('你见到了龙门近卫局的成员，他们是这座城市的守护者。'); return; }
+    if (chance(3) && loc === '邙山镇') { addEvent('邙山镇有关于器伥的可怕传说，你不敢夜里出门。'); return; }
+  }
+  
+  // 伊比利亚特色事件
+  if (n === 'iberia') {
+    if (chance(12)) { addEvent(`${loc}的夜晚，你听到了远处海边传来诡异的歌声...`, 'bad'); state.flags.heard_siren = true; return; }
+    if (chance(10)) { addEvent('大静谧的阴影依然笼罩着这片土地，许多人失踪了。', 'bad'); return; }
+    if (chance(8)) { addEvent('审判庭的审判官巡视了你的城镇，所有人都心惊胆战。'); return; }
+    if (chance(6) && loc === '潮石镇') { addEvent('你在潮石镇看到了荒废的黄金时代遗迹。'); return; }
+    if (chance(5)) { addEvent('你听说了"深海教会"的谣言，大人们禁止你靠近海边。'); return; }
+    if (chance(4) && loc === '颂圣棱堡') { addEvent('颂圣棱堡的高墙似乎在防御什么东西。'); return; }
+  }
+  
+  // 谢拉格特色事件
+  if (n === 'kjerag') {
+    if (chance(12)) { addEvent('你听长辈讲述耶拉冈德的传说，那是谢拉格的守护神。', 'special'); state.flags.yelagond_faith = true; return; }
+    if (chance(10) && loc === '图里卡姆') { addEvent('图里卡姆的街道上，你看到了喀兰贸易商会的商队。'); return; }
+    if (chance(8) && loc === '少女峰') { addEvent('你试图攀登少女峰，但被大人们阻止了。'); return; }
+    if (chance(6) && loc === '银心湖') { addEvent('银心湖的湖水清澈见底，据说那里住着神灵。'); return; }
+    if (chance(5)) { addEvent('银灰大人是谢拉格的传奇人物，你听说过他的故事。'); state.flags.silverash_fan = true; return; }
+    if (chance(4)) { addEvent('你见到了初雪小姐，她是圣女的代言人。'); return; }
+  }
+  
+  // 萨米特色事件
+  if (n === 'sami') {
+    if (chance(12)) { addEvent('萨米的雪祀告诉你关于邪魔的故事，那是北方的威胁。', 'bad'); return; }
+    if (chance(10)) { addEvent('极光照亮了夜空，萨米的精灵们在森林中歌唱。', 'special'); return; }
+    if (chance(8)) { addEvent('你学会了在苔原上生存的技能。'); addStat('health', 1); return; }
+    if (chance(6) && loc === '北境前线') { addEvent('北境前线的战士们是萨米的守护者。'); return; }
+    if (chance(5)) { addEvent('你见到了雪祀萨沫安，她是萨米最神秘的存在之一。'); return; }
+  }
+  
+  // 莱塔尼亚特色事件
+  if (n === 'leithania') {
+    if (chance(12)) { addEvent('莱塔尼亚的音乐学院传出美妙的旋律，你被深深吸引。', 'good'); state.flags.music_interest = true; return; }
+    if (chance(10)) { addEvent('你听说了巫王的传说，那是莱塔尼亚黑暗的历史。'); return; }
+    if (chance(8) && loc === '莱塔尼亚双子城') { addEvent('双子城的建筑华丽壮观，高塔直插云霄。'); return; }
+    if (chance(6) && state.race.id === 'caprinae') { addEvent('作为卡普里尼，你展现出源石技艺的天赋。', 'good'); addStat('intel', 1); return; }
+    if (chance(5)) { addEvent('你第一次听到了艾雅法拉的演讲，她是著名的火山学家。'); return; }
+  }
+  
+  // 卡兹戴尔特色事件
+  if (n === 'kazdel') {
+    if (chance(14)) { addEvent('疤痕商场是混乱中的秩序，你在这里学会了生存。'); return; }
+    if (chance(12)) { addEvent('雇佣兵营地里，你看到了各种各样的萨卡兹战士。'); return; }
+    if (chance(10)) { addEvent('战火从未远离卡兹戴尔，你习惯了枪炮声。', 'bad'); return; }
+    if (chance(8)) { addEvent('你听说了魔王特蕾西娅的传说，她是萨卡兹的希望。', 'special'); return; }
+    if (chance(6)) { addEvent('W是卡兹戴尔的传奇雇佣兵，你听过她的名字。'); return; }
+    if (chance(5)) { addEvent('你见到了巴别塔的遗址，那里曾经是萨卡兹的希望。'); return; }
+  }
+  
+  // 哥伦比亚特色事件
+  if (n === 'columbia') {
+    if (chance(12)) { addEvent('哥伦比亚城的摩天大楼让你震撼，这是科技与资本的国度。', 'good'); return; }
+    if (chance(10)) { addEvent('你听说了莱茵生命的大名，那是哥伦比亚最强大的科研机构。'); return; }
+    if (chance(8) && loc === '西部荒野') { addEvent('西部荒野充满了冒险与危险。'); return; }
+    if (chance(6)) { addEvent('萨卡兹摇滚乐在哥伦比亚很流行，你喜欢上了这种音乐。'); state.flags.rock_fan = true; return; }
+    if (chance(5)) { addEvent('你听说了黑钢国际的名声，那是泰拉最专业的安保公司。'); return; }
+    if (chance(4)) { addEvent('你在街头看到了企鹅物流的宣传...等等，企鹅物流？'); return; }
+  }
+  
+  // 维多利亚特色事件
+  if (n === 'victoria') {
+    if (chance(12)) { addEvent('伦蒂尼姆的蒸汽机轰鸣，这是蒸汽帝国的心脏。'); return; }
+    if (chance(10)) { addEvent('维多利亚的内乱波及到了你的生活，大人们看起来很焦虑。', 'bad'); return; }
+    if (chance(8)) { addEvent('你听说了狮王和塔拉的传说，维多利亚的历史充满了纷争。'); return; }
+    if (chance(6) && (state.flags.is_draco || state.flags.is_aslan)) { addEvent('作为维多利亚的高贵种族，你受到了特殊的教育。', 'good'); addStat('intel', 1); return; }
+    if (chance(5)) { addEvent('你听说了格拉斯哥帮的名声，据说是一群年轻人组成的帮派。'); return; }
+    if (chance(4) && loc === '塔拉') { addEvent('塔拉的历史悠久，据说是维多利亚最古老的城市之一。'); return; }
+  }
+  
+  // 东国特色事件
+  if (n === 'higashi') {
+    if (chance(12) && state.flags.is_oni) { addEvent('你开始学习控制自己的力量，鬼族的血脉在你体内觉醒。', 'special'); addStat('health', 1); return; }
+    if (chance(10) && loc === '东国都城') { addEvent('东国都城的樱花飘落，这是一个美丽而危险的国度。'); return; }
+    if (chance(8) && loc === '御山神社') { addEvent('你在御山神社祈福，神社里住着一位神秘的狗兽主。'); return; }
+    if (chance(6) && loc === '港口町') { addEvent('港口町的渔民讲述了海中怪物的故事。'); return; }
+    if (chance(5)) { addEvent('你见到了风丸，他是东国著名的忍者。'); return; }
+  }
+  
+  // 萨尔贡特色事件
+  if (n === 'sargon') {
+    if (chance(12) && loc === '沙尔-阿加德') { addEvent('沙尔-阿加德的宫廷充满了阴谋与权力斗争。'); return; }
+    if (chance(10) && loc === '雨林部落') { addEvent('雨林部落的生活原始而自由。'); return; }
+    if (chance(8)) { addEvent('瓦伊凡联盟的战士们是萨尔贡最强大的力量之一。'); return; }
+    if (chance(6) && loc.includes('焚风')) { addEvent('你听说了焚风热土的恐怖，那里是邪魔与皇帝战斗的遗迹。'); return; }
+    if (chance(5) && state.flags.is_manticore) { addEvent('你的隐匿能力开始显现，有时候别人会完全忽略你的存在。', 'special'); return; }
+  }
+  
+  // 米诺斯特色事件
+  if (n === 'minos') {
+    if (chance(12)) { addEvent('你在英雄广场听到了伟大英雄的传说！', 'good'); return; }
+    if (chance(10) && state.race.id === 'forte') { addEvent('作为丰蹄，你开始接受传统的战斗训练。'); addStat('health', 1); return; }
+    if (chance(8)) { addEvent('角斗场的比赛激动人心，你梦想成为英雄。'); state.flags.hero_dream = true; return; }
+    if (chance(6)) { addEvent('你听说了阿斯卡纶的传说，她是米诺斯最强大的战士。'); return; }
+  }
+  
+  // 雷姆必拓特色事件
+  if (n === 'rim') {
+    if (chance(12) && loc === '咧嘴谷') { addEvent('咧嘴谷的传说很可怕，据说那里有一只活了上百年的巨兽。'); return; }
+    if (chance(10) && state.race.id === 'cautus') { addEvent('作为卡特斯，你有三十六个兄弟姐妹...家里总是很热闹。'); addStat('luck', 1); return; }
+    if (chance(8)) { addEvent('矿业城的生活艰苦但充实。'); return; }
+    if (chance(6)) { addEvent('你听说了远处荒野的传说，那里有无数的秘密。'); return; }
+  }
+  
+  // 玻利瓦尔特色事件
+  if (n === 'bolivar') {
+    if (chance(14)) { addEvent('玻利瓦尔的内乱让无数人流离失所。', 'bad'); return; }
+    if (chance(10)) { addEvent('难民营的生活艰苦，但你学会了坚强。'); addStat('luck', 1); return; }
+    if (chance(8)) { addEvent('你的一些朋友在战火中失散了。', 'bad'); return; }
+  }
+  
+  // 切尔诺伯格灾难（特定年龄触发）
+  if (state.flags.talent_chernobog && state.age === 10 && (n === 'ursus' || state.flags.in_chernobog)) {
+    addEvent('那一天，切尔诺伯格陷入了地狱...', 'bad');
+    addEvent('整合运动袭击了城市，到处是火焰、尖叫和死亡。', 'bad');
+    addEvent('你看到了塔露拉的身影，她的眼中燃烧着复仇的火焰。', 'special');
+    state.flags.chernobog_survivor = true;
+    addAchievement('切尔诺伯格幸存者', true);
+    if (state.stats.luck <= 3) { addEvent('你的家人在混乱中失散了...', 'bad'); addStat('wealth', -3); state.flags.lost_family = true; }
+    else { addEvent('你和家人幸运地逃了出来，但家园已经不复存在。'); addStat('wealth', -1); }
+    return;
+  }
+  
+  // 源石虫宠物
+  if (state.flags.talent_originium_slug && chance(25)) {
+    addEvent('你收养了一只源石虫当宠物，取名"小石头"。它似乎很喜欢你。', 'special');
+    state.flags.pet_slug = true; addAchievement('源石虫饲养员'); return;
+  }
+  
+  // 基础童年事件
+  if (state.stats.intel >= 7 && chance(20)) { addEvent('你表现出惊人的学习天赋，老师们对你印象深刻。', 'good'); addStat('intel', 1); return; }
+  if (state.stats.wealth >= 7 && chance(20)) { addEvent('家庭请了最好的老师教导你，你接受了精英教育。', 'good'); addStat('intel', 1); return; }
+  if (state.stats.health <= 3 && chance(25)) { addEvent('你生了一场大病，在床上躺了很久。', 'bad'); addStat('health', -1); return; }
+  if (state.stats.wealth <= 2 && chance(25)) { addEvent('家里揭不开锅，你经常饿肚子。', 'bad'); addStat('health', -1); return; }
+  if (state.stats.looks >= 7 && chance(15)) { addEvent('你长得很可爱，总是被大人们夸奖。', 'good'); return; }
+  
+  addEvent(pick([
+    '你交到了第一个朋友。', '你开始上学了。', '平平淡淡的一年。',
+    '你学会了读书写字。', '你和小伙伴们一起玩耍。', '你第一次离开家乡旅行。',
+    '你发现了自己的兴趣爱好。', '你在学校表现不错。', '这一年过得很快。',
+    '你开始对这个世界产生更多好奇。', '你学会了一些生存技能。',
+    `你在${loc}度过了平静的一年。`, '你开始有了自己的小秘密。',
+    '你第一次感受到了友谊的温暖。', '你对未来充满了好奇。'
+  ]));
+}
+
+// 青少年、青年、中年、老年事件函数继续...
+function teenEvents() {
+  const n = state.nation.id;
+  
+  // 感染者困境
+  if (state.infected && !state.flags.rhodes && chance(15)) {
+    addEvent('你的矿石病症状开始显现，体表出现源石结晶。你不得不小心隐藏。', 'bad');
+    addStat('health', -1);
+    if (state.stats.luck >= 6 && chance(30)) {
+      addEvent('一个自称来自罗德岛的人找到了你，她说可以帮助你...', 'special');
+      state.flags.rhodes_contact = true;
+    }
+    return;
+  }
+  
+  // 各国特色青少年事件...
+  if (n === 'kazimierz' && (state.flags.knight_dream || chance(12))) {
+    if (state.race.id === 'kuranta' || state.flags.talent_knight_blood) {
+      addEvent('你报名参加了卡瓦莱利亚竞技场的见习骑士选拔。');
+      if (state.stats.health >= 6 && (state.stats.luck >= 5 || state.flags.talent_combat)) {
+        addEvent('你通过选拔，成为了见习竞技骑士！', 'special');
+        state.flags.knight = true; addStat('wealth', 1); addAchievement('竞技骑士');
+        if (state.flags.nearl_fan && chance(20)) addEvent('你在训练中远远看到了临光小姐。', 'special');
+      } else addEvent('可惜你没能通过选拔，但你不会放弃的。');
+    } else addEvent('你想成为骑士，但非库兰塔在卡西米尔很难被接纳为正式骑士。', 'bad');
+    return;
+  }
+  
+  if (n === 'lungmen' && (state.flags.talent_penguin || chance(10))) {
+    addEvent('你在唐人街闲逛时，被一只企鹅...等等，企鹅？...注意到了。');
+    if (chance(60)) {
+      addEvent('你被介绍进入企鹅物流打工。老板真的是一只企鹅，名叫大帝。', 'special');
+      state.flags.penguin = true; addStat('wealth', 1); addAchievement('企鹅物流员工');
+      if (chance(30)) addEvent('能天使给了你一个苹果派作为欢迎礼物。', 'special');
+      if (chance(25)) addEvent('德克萨斯对你点了点头，她看起来很冷淡但很可靠。', 'special');
+    }
+    return;
+  }
+  
+  if (n === 'laterano' && state.flags.is_sankta && state.age >= 16 && !state.flags.has_gun && chance(40)) {
+    addEvent('成年仪式上，你获得了属于自己的守护铳。光环更加明亮了。', 'special');
+    state.flags.has_gun = true; addAchievement('守护铳持有者');
+    return;
+  }
+  
+  if (n === 'victoria' && state.flags.talent_glasgow && chance(20)) {
+    addEvent('你遇到了格拉斯哥帮的成员，维娜和她的朋友们。');
+    if (chance(50)) {
+      addEvent('你加入了格拉斯哥帮，和他们一起行动。', 'special');
+      state.flags.glasgow_member = true; addAchievement('格拉斯哥帮成员');
+    }
+    return;
+  }
+  
+  if (n === 'kjerag' && state.flags.silverash_fan && chance(15)) {
+    addEvent('你有幸见到了银灰大人本人，他正在推动谢拉格的现代化。', 'special');
+    if (state.stats.intel >= 6 && chance(30)) {
+      addEvent('银灰注意到了你的才能，将你纳入了喀兰贸易的培训计划。', 'good');
+      state.flags.karlan_trainee = true; addStat('wealth', 1);
+    }
+    return;
+  }
+  
+  if ((n === 'yan' || n === 'lungmen') && state.flags.talent_tianshifu && chance(25)) {
+    addEvent('你被姜齐城的天师府选中，开始学习雷法。', 'special');
+    state.flags.tianshifu_member = true; addStat('intel', 1); addAchievement('天师府弟子');
+    return;
+  }
+  
+  if (n === 'columbia' && state.flags.talent_blacksteel && chance(25)) {
+    addEvent('你进入了黑钢国际的训练营。', 'special');
+    state.flags.blacksteel_member = true; addStat('health', 1); addAchievement('黑钢成员');
+    if (chance(30)) addEvent('你的教官是弗兰卡，她的剑术凌厉而优雅。', 'special');
+    return;
+  }
+  
+  // 源石技艺觉醒
+  if ((state.flags.talent_arts || state.flags.talent_arts_master || state.race.special === 'arts_affinity') && !state.flags.arts_awakened && chance(35)) {
+    addEvent('你的源石技艺完全觉醒了！你能感受到源石的脉动。', 'special');
+    state.flags.arts_awakened = true; addStat('intel', 1); addAchievement('源石技艺师');
+    return;
+  }
+  
+  // 初恋
+  if (state.age >= 16 && !state.flags.first_love && state.stats.looks >= 5 && chance(15)) {
+    addEvent('你经历了人生中的第一次心动...', 'pink');
+    if (state.stats.luck >= 5) { addEvent('对方似乎也对你有好感。', 'good'); state.flags.first_love = true; }
+    else addEvent('可惜只是单相思。', 'bad');
+    return;
+  }
+  
+  addEvent(pick([
+    '你顺利完成了学业。', '青春期的你有些叛逆。', '平淡的一年。',
+    '你开始思考未来的道路。', `你在${state.location}结识了新朋友。`,
+    '你学会了一些实用技能。', '你参加了一次学校的活动。',
+    '你阅读了很多书籍，开阔了眼界。', '你开始关注泰拉的时事。'
+  ]));
+}
+
+function youngAdultEvents() {
+  const n = state.nation.id;
+  
+  // 罗德岛招募
+  if (!state.flags.rhodes && (state.flags.rhodes_contact || chance(3 + (state.infected ? 12 : 0) + (state.flags.arts_awakened ? 8 : 0)))) {
+    addEvent('一艘巨大的移动城舰出现在视野中，那是...罗德岛？', 'special');
+    if (state.infected || state.flags.arts_awakened || chance(50)) {
+      addEvent('你加入了罗德岛，成为了一名干员！', 'special');
+      state.flags.rhodes = true; addStat('wealth', 2); addAchievement('罗德岛干员', true);
+      if (state.flags.talent_doctor && chance(40)) {
+        addEvent('第一次见到博士时，你有一种强烈的既视感...', 'legendary');
+        state.flags.met_doctor = true;
+      }
+      if (chance(40)) addEvent('凯尔希医生对你进行了入职面试。', 'special');
+      if (chance(50)) addEvent('阿米娅亲自欢迎了你加入罗德岛。', 'good');
+    } else addEvent('但你婉拒了邀请，继续自己的人生道路。');
+    return;
+  }
+  
+  if (state.flags.rhodes) { rhodesEvents(); return; }
+  
+  // 整合运动
+  if (state.infected && state.nation.danger >= 3 && !state.flags.reunion && !state.flags.rhodes && chance(8)) {
+    addEvent('有人向你宣传整合运动的理念。', 'special');
+    if (state.stats.luck <= 4 && chance(40)) {
+      addEvent('你加入了整合运动。', 'special');
+      state.flags.reunion = true; addAchievement('整合运动成员', true);
+    } else addEvent('你拒绝了。暴力不是答案。');
+    return;
+  }
+  
+  // 莱茵生命
+  if (state.flags.talent_rhine && n === 'columbia' && chance(25)) {
+    addEvent('你在莱茵生命找到了工作！', 'good');
+    state.flags.rhine_employee = true; addStat('wealth', 2); addStat('intel', 1);
+    if (chance(30)) addEvent('你见到了沉默医生。', 'special');
+    return;
+  }
+  
+  // 事业发展
+  if (state.stats.intel >= 7 && state.stats.wealth >= 5 && chance(15)) {
+    addEvent('凭借才智，你的事业蒸蒸日上。', 'good');
+    addStat('wealth', 2);
+    return;
+  }
+  
+  // 结婚
+  if (state.age >= 25 && !state.flags.married && state.stats.looks >= 5 && chance(12)) {
+    addEvent('你遇到了人生伴侣，步入婚姻。', 'good');
+    state.flags.married = true; addAchievement('成家立业');
+    if (chance(40) && state.age <= 32) {
+      addEvent('你们有了孩子。', 'good');
+      state.flags.has_child = true;
+    }
+    return;
+  }
+  
+  addEvent(pick([
+    '你努力工作。', '平凡的一年。', '日子就这样过去了。',
+    '你的生活逐渐稳定下来。', `你在${state.location}度过了忙碌的一年。`
+  ]));
+}
+
+function rhodesEvents() {
+  const evts = [
+    { w: 15, t: '你执行了一次常规任务，顺利完成。' },
+    { w: 12, t: '你和其他干员进行了训练。' },
+    { w: 8, t: '你在食堂吃到了古米的炖菜。', e: { health: 1 } },
+    { w: 6, t: '博士给你发了奖金。', type: 'good', e: { wealth: 1 } },
+    { w: 5, t: '你遇到了阿米娅。', type: 'good' },
+    { w: 4, t: '你看到德克萨斯和拉普兰德在吵架...', type: 'special' },
+    { w: 4, t: '能天使给了你一个苹果派。', type: 'special' },
+    { w: 4, t: '你在训练场看到陈在练剑。', type: 'special' },
+    { w: 3, t: '红送给你一个兔子布偶。', type: 'special' },
+    { w: 3, t: '闪灵为你治疗了伤口。', type: 'good', e: { health: 1 } },
+    { w: 3, t: '你看到了史尔特尔。', type: 'special' },
+    { w: 3, t: '棘刺在甲板上钓鱼，邀请你一起。', type: 'good' },
+    { w: 2, t: '你见到了浊心斯卡蒂，她体内的"她"让你脊背发凉。', type: 'cyan' },
+    { w: 2, t: '艾雅法拉给你讲解了火山学知识。', type: 'good', e: { intel: 1 } },
+    { w: 2, t: '你和银灰下了一盘棋。', type: 'special' },
+    { w: 2, t: '崖心拉着你去攀岩。', type: 'good' },
+    { w: 2, t: '格拉尼给你分享了骑士小饼干。', type: 'good' },
+    { w: 1, t: '你看到了凯尔希身边的Mon3tr。', type: 'special' },
+    { w: 1, t: '你感觉有人在看你...是曼提柯？', type: 'special' },
+  ];
+  
+  if (state.infected) evts.push({ w: 10, t: '你接受了罗德岛的治疗，矿石病得到控制。', type: 'good', e: { health: 1 } });
+  if (state.flags.is_sankta) evts.push({ w: 5, t: '你遇到了能天使，她很高兴见到同族！', type: 'good' });
+  if (state.race.id === 'sarkaz') evts.push({ w: 5, t: 'W用奇怪的眼神看着你。', type: 'special' });
+  
+  if (state.flags.met_doctor && !state.flags.priestess_vision && chance(8)) {
+    addEvent('你又做了那个梦。一个白色的身影，一个温柔的声音...', 'legendary');
+    state.flags.priestess_vision = true;
+    addAchievement('普瑞赛斯的幻影', true);
+    return;
+  }
+  
+  if (chance(5)) {
+    addEvent(pick(['你参与了龙门保卫战！', '你参与了切尔诺伯格行动！', '你参与了打击整合运动残党的行动。']), 'special');
+    if (chance(30)) { addEvent('你在行动中负伤。', 'bad'); addStat('health', -1); }
+    return;
+  }
+  
+  const valid = evts;
+  const total = valid.reduce((s, e) => s + e.w, 0);
+  let r = Math.random() * total;
+  for (const e of valid) {
+    r -= e.w;
+    if (r <= 0) {
+      addEvent(e.t, e.type || '');
+      if (e.e) Object.entries(e.e).forEach(([k, v]) => addStat(k, v));
+      break;
+    }
+  }
+}
+
+function middleAgeEvents() {
+  if (state.infected && !state.flags.rhodes) {
+    addEvent('矿石病进入中期，身体明显恶化。', 'bad');
+    addStat('health', -1);
+    if (state.stats.health <= 2 && chance(40)) { state.dead = true; state.deathCause = '矿石病恶化'; }
+    return;
+  }
+  
+  if (state.flags.rhodes) { rhodesEvents(); return; }
+  
+  if (state.flags.has_child && chance(20)) { addEvent('你的孩子长大成人了。', 'good'); return; }
+  
+  if (state.stats.health <= 4 && chance(25)) { addEvent('你开始感受到身体的衰老。', 'bad'); addStat('health', -1); return; }
+  
+  addEvent(pick([
+    '人到中年，你回顾人生。', '平静的一年。', '岁月不饶人。',
+    '你开始怀念年轻时的日子。', `你在${state.location}安稳度日。`
+  ]));
+}
+
+function elderEvents() {
+  if (state.infected && chance(30 + (state.flags.rhodes ? -15 : 0))) {
+    state.dead = true;
+    state.deathCause = '矿石病晚期';
+    addEvent('矿石病进入末期...', 'bad');
+    return;
+  }
+  
+  const dc = (state.age - 55) * 4 + (10 - state.stats.health) * 5;
+  if (chance(dc)) {
+    state.dead = true;
+    state.deathCause = state.age >= 80 ? '寿终正寝' : pick(['在睡梦中离世', '器官衰竭', '因病去世']);
+    if (state.age >= 80) addAchievement('长寿', true);
+    if (state.age >= 100) addAchievement('百岁老人', true);
+    addEvent('你感到生命正在流逝...', 'bad');
+    return;
+  }
+  
+  if (state.flags.talent_immortal && state.age >= 90) addEvent('你的身体依然健康得不可思议。', 'special');
+  
+  if (state.flags.rhodes) { rhodesEvents(); return; }
+  
+  addEvent(pick([
+    '你安享晚年。', '你给年轻人讲述过去的故事。', '身体大不如前了。',
+    '你回忆起这一生的种种。', `你在${state.location}度过平静的日子。`
+  ]));
+  
+  if (chance(25)) addStat('health', -1);
+}
+
+// 检查事件函数
+function checkDisaster() {
+  if (!chance(state.nation.danger * 1.5)) return;
+  
+  addEvent(pick(['天灾袭击了你所在的地区！', '源石风暴席卷而来！']), 'bad');
+  
+  if (state.flags.talent_calamity) { addEvent('但你早已预感到天灾来临，提前做好了准备。', 'good'); return; }
+  
+  if (state.stats.luck <= 3 && chance(30)) {
+    addEvent('你在天灾中受了重伤。', 'bad');
+    addStat('health', -2);
+    if (!state.infected && chance(30)) { state.infected = true; addEvent('更糟的是，你感染了矿石病...', 'bad'); }
+    if (state.stats.health <= 0) { state.dead = true; state.deathCause = '在天灾中丧生'; }
+  } else if (chance(15)) { addEvent('你在天灾中失去了财产。', 'bad'); addStat('wealth', -2); }
+}
+
+function checkInfection() {
+  if (state.infected) return;
+  let base = state.flags.talent_resist ? 0.3 : 1;
+  base += state.nation.danger * 0.2;
+  if (state.race.special === 'sarkaz') base += 1.5;
+  
+  if (chance(base)) {
+    state.infected = true;
+    addEvent('你被诊断出感染了矿石病...', 'bad');
+    nationInfectedReaction();
+    if (!state.flags.rhodes && chance(25)) { addEvent('你听说有个叫罗德岛的组织在帮助感染者...', 'special'); state.flags.rhodes_contact = true; }
+  }
+}
+
+function checkSpecialEvents() {
+  if (state.flags.pet_slug && chance(4)) { addEvent('你的源石虫生了一窝小虫子！', 'special'); state.flags.slug_family = true; addAchievement('源石虫大家族'); }
+  
+  if (state.flags.is_sankta && state.flags.has_gun && !state.flags.fallen && chance(1.5)) {
+    addEvent('在某次冲突中，你对另一位萨科塔举起了守护铳...', 'bad');
+    addEvent('律法降下了惩罚，你成为了堕天使...', 'bad');
+    state.flags.fallen = true; addAchievement('堕天使', true);
+  }
+}
+
+function checkCharacterEncounters() {
+  if (state.flags.rhodes || chance(95)) return;
+  const n = state.nation.id;
+  
+  if (n === 'lungmen' && chance(20)) addEvent(pick(['你在街头看到了陈小姐。', '你遇到了星熊。', '你看到了魏彦吾大人的车队。']), 'special');
+  if (n === 'kazimierz' && chance(20)) addEvent(pick(['你看到了耀骑士临光的比赛！', '你看到了白金小姐。']), 'special');
+  if (n === 'kjerag' && chance(20)) addEvent(pick(['你看到了银灰大人。', '你遇到了崖心小姐。']), 'special');
+}
+
+function checkDeath() {
+  if (state.dead) return;
+  
+  if (state.stats.health <= 0) { state.dead = true; state.deathCause = state.infected ? '矿石病' : '身体衰竭'; addEvent('身体到达极限...', 'bad'); return; }
+  if (state.stats.luck <= 0 && chance(20)) { state.dead = true; state.deathCause = pick(['流弹击中', '意外事故', '倒霉到家']); addEvent('命运开了残酷的玩笑...', 'bad'); }
+}
+
+// 结局
+function showEnding() {
+  let score = state.age;
+  if (state.flags.rhodes) score += 25;
+  if (state.flags.married) score += 10;
+  if (state.flags.has_child) score += 10;
+  if (state.flags.knight) score += 15;
+  if (state.flags.penguin) score += 10;
+  if (state.flags.rhine_employee) score += 15;
+  if (state.flags.blacksteel_member) score += 12;
+  if (state.stats.wealth >= 7) score += 15;
+  if (state.age >= 70) score += 20;
+  if (state.age >= 80) score += 20;
+  state.achievements.forEach(a => score += a.rare ? 15 : 5);
+  
+  let icon = '💀', title = '人生终结';
+  if (state.age >= 100) { icon = '🌟'; title = '传奇人生'; }
+  else if (state.age >= 80) { icon = '🌅'; title = '寿终正寝'; }
+  else if (state.flags.rhodes && state.age >= 50) { icon = '⚔️'; title = '传奇干员'; }
+  else if (state.flags.reunion) { icon = '🔥'; title = '燃烧的灵魂'; }
+  else if (state.flags.priestess_vision) { icon = '✨'; title = '来自远古的记忆'; }
+  else if (state.flags.knight && state.age >= 40) { icon = '🏇'; title = '荣耀骑士'; }
+  else if (state.flags.fallen) { icon = '😈'; title = '堕落的天使'; }
+  else if (state.infected && state.age < 30) { icon = '💎'; title = '被矿石病夺走的青春'; }
+  else if (state.age < 18) { icon = '🥀'; title = '过早凋零'; }
+  
+  document.getElementById('ending-icon').textContent = icon;
+  document.getElementById('ending-title').textContent = title;
+  document.getElementById('ending-subtitle').textContent = `享年${state.age}岁`;
+  
+  document.getElementById('ending-stats').innerHTML = `
+    <div class="ending-stat"><div class="ending-stat-value">${state.age}</div><div class="ending-stat-label">享年</div></div>
+    <div class="ending-stat"><div class="ending-stat-value">${score}</div><div class="ending-stat-label">评分</div></div>
+    <div class="ending-stat"><div class="ending-stat-value">${state.achievements.length}</div><div class="ending-stat-label">成就</div></div>
+  `;
+  
+  document.getElementById('ending-achievements').innerHTML = state.achievements.map(a => `<span class="achievement ${a.rare ? 'rare' : ''}">${a.name}</span>`).join('');
+  
+  document.getElementById('ending-origin').textContent = `${state.nation.name}${state.location}的${state.race.name}`;
+  document.getElementById('ending-death').textContent = state.deathCause;
+  
+  let ep = '平凡的一生，但认真活过。';
+  if (state.age < 10) ep = '还没来得及看清这个世界...';
+  else if (state.age < 18) ep = '青春的花朵过早凋零。';
+  else if (state.flags.priestess_vision) ep = '她听到了来自远古的呼唤...';
+  else if (state.flags.rhodes) ep = '为感染者的未来而战斗过的人。';
+  else if (state.infected) ep = '愿来世不再有矿石病。';
+  else if (state.flags.reunion) ep = '为尊严燃烧到最后一刻。';
+  else if (state.flags.knight) ep = '竞技场上的荣耀永不褪色。';
+  else if (state.age >= 100) ep = '活过了一个世纪，传奇。';
+  else if (state.age >= 80) ep = '在泰拉活了一辈子，何其幸运。';
+  document.getElementById('ending-epitaph').textContent = ep;
+  
+  let sum = `你作为${state.race.name}出生在${state.nation.name}的${state.location}。\n`;
+  if (state.talents.length > 0) sum += `天赋是"${state.talents.map(t => t.name).join('"、"')}"。\n`;
+  if (state.infected) sum += '你是一名感染者。';
+  if (state.flags.rhodes) sum += '你曾是罗德岛的干员。';
+  if (state.flags.knight) sum += '你当过竞技骑士。';
+  if (state.flags.penguin) sum += '你在企鹅物流打过工。';
+  if (state.flags.rhine_employee) sum += '你在莱茵生命工作过。';
+  if (state.flags.blacksteel_member) sum += '你是黑钢国际的成员。';
+  if (state.flags.tianshifu_member) sum += '你是天师府的弟子。';
+  if (state.flags.reunion) sum += '你曾是整合运动的一员。';
+  if (state.flags.fallen) sum += '你成为了堕天使。';
+  if (state.flags.married) sum += '你拥有过家庭。';
+  sum += `\n最终在${state.age}岁时，${state.deathCause}。`;
+  
+  if (score >= 150) sum += '\n\n这是泰拉大陆上的传奇人生！';
+  else if (score >= 100) sum += '\n\n这是精彩的人生。';
+  else if (score >= 60) sum += '\n\n平凡但真实的一生。';
+  else sum += '\n\n泰拉是残酷的，但你至少来过这个世界。';
+  
+  document.getElementById('ending-summary').textContent = sum;
+  showPage('ending-page');
+}
+
+function restart() { showPage('intro-page'); }
+</script>
+</body>
+</html>
